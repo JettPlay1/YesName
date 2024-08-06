@@ -4,6 +4,7 @@ from bot import dp, tgbot
 from bot.routes import *
 import logging
 
+
 logging.basicConfig(level=logging.INFO)
 
 async def main():
