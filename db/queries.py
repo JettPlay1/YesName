@@ -1,83 +1,116 @@
-import aiosqlite
+import asyncio
 import logging
-import aiofiles
+
+from db import engine
+from db.classes import *
+from sqlalchemy import select, insert, update, desc
 
 
-async def mark_task_completed(user_id):
-    task_id = await get_user_task_id(user_id)
+async def get_user_data(user_id: int) -> dict:
     try:
-        async with aiosqlite.connect("./db/db.sql") as conn:
-            cursor = await conn.execute(f"SELECT completed_tasks FROM User_tb WHERE id={user_id}")
-            completed_tasks = await cursor.fetchone()
-            completed_tasks = completed_tasks[0]
-            await conn.execute(f"UPDATE User_tb SET completed_tasks='{completed_tasks + str(task_id) + ','}' WHERE id={user_id}")
-            await conn.commit()
-    except Exception as e:
-        print(e)
-        pass
+        async with engine.connect() as conn:
+            result = await conn.execute(select(User).where(User.id == user_id))
+            row = result.fetchone()
+            if len(row) == 0:
+                return
+            user_data = {}
+            user_data["user_id"]         = row[0]
+            user_data["name"]            = row[1]
+            user_data["surname"]         = row[2]
+            user_data["score"]           = row[3]
+            user_data["task_id"]         = row[4]
+            user_data["completed_tasks"] = row[5]
 
-
-async def is_task_solved(user_id):
-    task_id = await get_user_task_id(user_id)
-    try:
-        async with aiosqlite.connect("./db/db.sql") as conn:
-            cursor = await conn.execute(f"SELECT completed_tasks FROM User_tb WHERE id={user_id}")
-            user_data = await cursor.fetchone()
-            print(user_data)
-            if str(task_id) in user_data[0]:
-                return True
-            return False
-    except Exception as e:
-        print(e)
-        return False
-
-
-async def get_user_stats(user_id):
-    try:
-        async with aiosqlite.connect("./db/db.sql") as conn:
-            cursor = await conn.execute(f"SELECT name,surename,score FROM User_tb WHERE id={user_id}")
-            user_data = await cursor.fetchone()
             return user_data
+        
     except Exception as e:
-        print(e)
-        return ()
+        logging.error(f"Произошла ошибка при запросе к БД (user_data): {e}")
+        return
+    
 
-
-async def add_points_to_user(user_id, points):
-    stats = await get_user_stats(user_id)
-    old_points = stats[2]
+# Column - Класс, реализующий таблицу, и столбец данного класса. Н-р: User.id
+# По умолчанию возвращает список пользователей отсортированных по количеству очков
+async def get_all_users(column: any = None, 
+                        value: any = None) -> list[dict]:
     try:
-        async with aiosqlite.connect("./db/db.sql") as conn:
-            await conn.execute(f"UPDATE User_tb SET score={old_points + points} WHERE id={user_id}")
-            await conn.commit()
-    except:
-        pass
+        async with engine.connect() as conn:
+            if column and value:
+                result = await conn.execute(select(User).where(column == value))
+            
+            result = await conn.execute(select(User).order_by(desc(User.score)))
+            users = []
+            for row in result.fetchall():
+                user_data = {}
+                user_data["id"]              = row[0]
+                user_data["name"]            = row[1]
+                user_data["surname"]         = row[2]
+                user_data["score"]           = row[3]
+                user_data["task_id"]         = row[4]
+                user_data["completed_tasks"] = row[5]
+                users.append(user_data)
 
-
-async def get_task_score(user_id):
-    task_id = await get_user_task_id(user_id)
-    try:
-        async with aiosqlite.connect("./db/db.sql") as conn:
-            cursor = await conn.execute(f"SELECT score FROM Task_tb WHERE id={task_id}")
-            score = await cursor.fetchone()
-            return score[0]
-    except:
-        pass
-
-
-async def get_top():
-    try:
-        async with aiosqlite.connect("./db/db.sql") as conn:
-            cursor = await conn.execute(f"SELECT name,surename,score FROM User_tb ORDER BY score DESC")
-            users = await cursor.fetchall()
             return users
-    except:
-        pass
+        
+    except Exception as e:
+        logging.error(f"Произошла ошибка при запросе к БД (users): {e}")
+        return []
+
+
+async def insert_user(user_id: int, 
+                      name: str = "default_name", 
+                      surname: str = "default_name", 
+                      score: int = 0, 
+                      task_id: int = -1, 
+                      completed_tasks: str = ""):
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(insert(User).values(id=user_id, 
+                                                   name=name, 
+                                                   surname=surname, 
+                                                   score=score,
+                                                   task_id=task_id, 
+                                                   completed_tasks=completed_tasks
+                                                   ))
+            await conn.commit()
+    except Exception as e:
+        logging.error(f"Произошла ошибка при добавлении пользователя в БД: {e}")
+
+
+async def update_user_by_id(user_id: int, 
+                            column: any, 
+                            value: any):
+    try:
+        async with engine.connect() as conn:
+            await conn.execute(update(User).where(User.id == user_id).values({column: value}))
+            await conn.commit()
+    except Exception as e:
+        logging.error(f"Произошла ошибка при добавлении пользователя в БД: {e}")
+
+
+async def get_task_data(task_id: int) -> dict:
+    try:
+        async with engine.connect() as conn:
+            result = await conn.execute(select(Task).where(Task.id == task_id))
+            row = result.fetchone()
+            task_data = {}
+            task_data["id"]          = row[0]
+            task_data["name"]        = row[1]
+            task_data["description"] = row[2]
+            task_data["score"]       = row[3]
+            task_data["flag"]        = row[4]
+            task_data["final_flag"]  = row[5]
+
+            return task_data
+        
+    except Exception as e:
+        logging.error(f"Произошла ошибка при запросе к БД (task_data): {e}")
+        return {}
 
 
 async def get_flag_part(user_id, flag):
-    task_id = await get_user_task_id(user_id)
-    users = await get_users_on_task(task_id)
+    user_data = await get_user_data(user_id)
+    users = await get_all_users(User.task_id, user_data['task_id'])
+    users = [user['id'] for user in users]
     ind = users.index(user_id)
     parts_len = len(flag) // len(users)
     parts = []
@@ -86,136 +119,3 @@ async def get_flag_part(user_id, flag):
     parts.append((len(users), flag[parts_len*(len(users)-1):]))
 
     return parts[ind]
-
-
-async def get_users_on_task(task_id):
-    try:
-        async with aiosqlite.connect("./db/db.sql") as conn:
-            cursor = await conn.execute(f"SELECT id FROM User_tb WHERE current_id_task={task_id}")
-            users = await cursor.fetchall()
-            users = [a[0] for a in users]
-            return users
-    except:
-        return []
-
-
-async def get_user_task_id(user_id):
-    try:
-        async with aiosqlite.connect("./db/db.sql") as conn:
-            cursor = await conn.execute(f"SELECT current_id_task FROM User_tb WHERE id={user_id}")
-            task_id = await cursor.fetchone()
-            return task_id[0]
-    except Exception as e:
-        logging.error(f"{e}")
-        return -1
-
-
-async def get_flag(user_id):
-    task_id = await get_user_task_id(user_id)
-    flag = await get_flag_by_task_id(task_id)
-    return flag
-
-
-async def get_real_flag(user_id):
-    task_id = await get_user_task_id(user_id)
-    flag = await get_real_flag_by_task_id(task_id)
-    return flag
-
-
-async def get_real_flag_by_task_id(task_id):
-    try:
-        async with aiosqlite.connect("./db/db.sql") as conn:
-            cursor = await conn.execute(f"SELECT real_flag FROM Task_tb WHERE id={task_id}")
-            real_flag = await cursor.fetchone()
-            return real_flag[0]
-    except:
-        return -1
-
-
-async def get_flag_by_task_id(task_id):
-    try:
-        async with aiosqlite.connect("./db/db.sql") as conn:
-            cursor = await conn.execute(f"SELECT flag FROM Task_tb WHERE id={task_id}")
-            flag = await cursor.fetchone()
-            return flag[0]
-    except:
-        return -1
-
-
-async def show_tasks():
-    async with aiosqlite.connect("./db/db.sql") as conn:
-        cursor = await conn.execute("SELECT * FROM User_tb")
-        users = await cursor.fetchall()
-    print(users)
-
-
-async def get_task(user_id) -> str:
-    try:
-        async with aiosqlite.connect("./db/db.sql") as conn:
-            cursor = await conn.execute(f"SELECT current_id_task FROM User_tb WHERE id={user_id}")
-            task_id = await cursor.fetchone()
-            task_id = task_id[0]
-            if task_id == -1:
-                return "У вас нет активного задания."
-            cursor = await conn.execute(f"SELECT Name FROM Task_tb WHERE id={task_id}")
-            task_name = await cursor.fetchone()
-            return task_name[0]
-    except Exception as e:
-        logging.error(f"{e}")
-        return "Произошла ошибка при обработке"
-
-
-async def add_user(user_id) -> bool:
-    users_list = await get_users_list()
-    length = len(users_list)
-    async with aiofiles.open("./db/scam.txt", "r") as file:
-        tasks = await file.readlines()
-        tasks = tasks[length].strip().split(':')[1].split(',')
-
-    try:
-        async with aiosqlite.connect("./db/db.sql") as conn:
-            await conn.execute(f"INSERT INTO User_tb (id,name,surename,score,current_id_task,completed_tasks,team)\
-                                 VALUES ({user_id},'Вася','Пупкин',0,{tasks[0]},'','Домино')")
-            await conn.commit()
-        
-        return True
-    
-    except Exception as e:
-        logging.error(f"{e}")
-        return False
-
-
-
-async def get_task_list() -> list:
-    try:
-        async with aiosqlite.connect("./db/db.sql") as conn:
-            cursor = await conn.execute("SELECT id FROM Task_tb")
-            tasks = await cursor.fetchall()
-
-            return tasks
-    except Exception as e:
-        logging.error(f"Произошла ошибка при получении списка заданий: {e}")
-        return []
-
-
-async def get_users_list() -> list:
-    try:
-        async with aiosqlite.connect("./db/db.sql") as conn:
-            cursor = await conn.execute("SELECT id FROM User_tb")
-            users = await cursor.fetchall()
-            return users
-    except Exception as e:
-        logging.error(f"Произошла ошибка при получении списка пользователей: {e}")
-        return []
-
-
-async def set_tasks(user_tasks: dict) -> bool:
-    try:
-        async with aiosqlite.connect("./db/db.sql") as conn:
-            for user_id, tasks in user_tasks.items():
-                await conn.execute(f"UPDATE User_tb SET tasks={';'.join(tasks)} WHERE id={user_id};")
-                await conn.commit()
-        return True
-    except Exception as e:
-        logging.error(f"Произошла ошибка при добавлении заданий в БД: {e}")
-        return False
