@@ -2,11 +2,13 @@ import asyncio
 
 from bot import dp, tgbot
 from bot.routes import *
+from db import init_db
 import logging
 
 logging.basicConfig(level=logging.INFO)
 
 async def main():
+    await init_db()
     await dp.start_polling(tgbot)
 
 
