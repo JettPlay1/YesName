@@ -3,10 +3,81 @@ import logging
 import aiofiles
 
 
+async def mark_task_completed(user_id):
+    task_id = await get_user_task_id(user_id)
+    try:
+        async with aiosqlite.connect("./db/db.sql") as conn:
+            cursor = await conn.execute(f"SELECT completed_tasks FROM User_tb WHERE id={user_id}")
+            completed_tasks = await cursor.fetchone()
+            completed_tasks = completed_tasks[0]
+            await conn.execute(f"UPDATE User_tb SET completed_tasks='{completed_tasks + str(task_id) + ','}' WHERE id={user_id}")
+            await conn.commit()
+    except Exception as e:
+        print(e)
+        pass
+
+
+async def is_task_solved(user_id):
+    task_id = await get_user_task_id(user_id)
+    try:
+        async with aiosqlite.connect("./db/db.sql") as conn:
+            cursor = await conn.execute(f"SELECT completed_tasks FROM User_tb WHERE id={user_id}")
+            user_data = await cursor.fetchone()
+            print(user_data)
+            if str(task_id) in user_data[0]:
+                return True
+            return False
+    except Exception as e:
+        print(e)
+        return False
+
+
+async def get_user_stats(user_id):
+    try:
+        async with aiosqlite.connect("./db/db.sql") as conn:
+            cursor = await conn.execute(f"SELECT name,surename,score FROM User_tb WHERE id={user_id}")
+            user_data = await cursor.fetchone()
+            return user_data
+    except Exception as e:
+        print(e)
+        return ()
+
+
+async def add_points_to_user(user_id, points):
+    stats = await get_user_stats(user_id)
+    old_points = stats[2]
+    try:
+        async with aiosqlite.connect("./db/db.sql") as conn:
+            await conn.execute(f"UPDATE User_tb SET score={old_points + points} WHERE id={user_id}")
+            await conn.commit()
+    except:
+        pass
+
+
+async def get_task_score(user_id):
+    task_id = await get_user_task_id(user_id)
+    try:
+        async with aiosqlite.connect("./db/db.sql") as conn:
+            cursor = await conn.execute(f"SELECT score FROM Task_tb WHERE id={task_id}")
+            score = await cursor.fetchone()
+            return score[0]
+    except:
+        pass
+
+
+async def get_top():
+    try:
+        async with aiosqlite.connect("./db/db.sql") as conn:
+            cursor = await conn.execute(f"SELECT name,surename,score FROM User_tb ORDER BY score DESC")
+            users = await cursor.fetchall()
+            return users
+    except:
+        pass
+
+
 async def get_flag_part(user_id, flag):
     task_id = await get_user_task_id(user_id)
     users = await get_users_on_task(task_id)
-    users = [a[0] for a in users]
     ind = users.index(user_id)
     parts_len = len(flag) // len(users)
     parts = []
@@ -22,6 +93,7 @@ async def get_users_on_task(task_id):
         async with aiosqlite.connect("./db/db.sql") as conn:
             cursor = await conn.execute(f"SELECT id FROM User_tb WHERE current_id_task={task_id}")
             users = await cursor.fetchall()
+            users = [a[0] for a in users]
             return users
     except:
         return []

@@ -7,7 +7,8 @@ main_menu_kb = InlineKeyboardMarkup(
                 [InlineKeyboardButton(text="Отобразить задание", callback_data="get_task"),
                  InlineKeyboardButton(text="Рейтинг", callback_data="rating")],
                 [InlineKeyboardButton(text="Магазин", callback_data="shop"),
-                 InlineKeyboardButton(text="Ачивки", callback_data="achievements")]
+                 InlineKeyboardButton(text="Ачивки", callback_data="achievements")],
+                [InlineKeyboardButton(text="Моя команда", callback_data="get_team")]
             ]
         )
 
