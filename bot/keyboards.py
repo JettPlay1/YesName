@@ -4,10 +4,10 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 # Основное меню
 main_menu_kb = InlineKeyboardMarkup(
             inline_keyboard=[
-                [InlineKeyboardButton(text="Получить задание", callback_data="get_task")],
-                [InlineKeyboardButton(text="Получить слушателя", callback_data="get_listener")],
-                [InlineKeyboardButton(text="Оставить отзыв", callback_data="leave_feedback")],
-                [InlineKeyboardButton(text="Магазин", callback_data="shop")]
+                [InlineKeyboardButton(text="Отобразить задание", callback_data="get_task"),
+                 InlineKeyboardButton(text="Рейтинг", callback_data="rating")],
+                [InlineKeyboardButton(text="Магазин", callback_data="shop"),
+                 InlineKeyboardButton(text="Ачивки", callback_data="achievements")]
             ]
         )
 
