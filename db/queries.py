@@ -3,6 +3,73 @@ import logging
 import aiofiles
 
 
+async def get_flag_part(user_id, flag):
+    task_id = await get_user_task_id(user_id)
+    users = await get_users_on_task(task_id)
+    users = [a[0] for a in users]
+    ind = users.index(user_id)
+    parts_len = len(flag) // len(users)
+    parts = []
+    for i in range(len(users)-1):
+        parts.append((i+1, flag[i:i+parts_len]))
+    parts.append((len(users), flag[parts_len*(len(users)-1):]))
+
+    return parts[ind]
+
+
+async def get_users_on_task(task_id):
+    try:
+        async with aiosqlite.connect("./db/db.sql") as conn:
+            cursor = await conn.execute(f"SELECT id FROM User_tb WHERE current_id_task={task_id}")
+            users = await cursor.fetchall()
+            return users
+    except:
+        return []
+
+
+async def get_user_task_id(user_id):
+    try:
+        async with aiosqlite.connect("./db/db.sql") as conn:
+            cursor = await conn.execute(f"SELECT current_id_task FROM User_tb WHERE id={user_id}")
+            task_id = await cursor.fetchone()
+            return task_id[0]
+    except Exception as e:
+        logging.error(f"{e}")
+        return -1
+
+
+async def get_flag(user_id):
+    task_id = await get_user_task_id(user_id)
+    flag = await get_flag_by_task_id(task_id)
+    return flag
+
+
+async def get_real_flag(user_id):
+    task_id = await get_user_task_id(user_id)
+    flag = await get_real_flag_by_task_id(task_id)
+    return flag
+
+
+async def get_real_flag_by_task_id(task_id):
+    try:
+        async with aiosqlite.connect("./db/db.sql") as conn:
+            cursor = await conn.execute(f"SELECT real_flag FROM Task_tb WHERE id={task_id}")
+            real_flag = await cursor.fetchone()
+            return real_flag[0]
+    except:
+        return -1
+
+
+async def get_flag_by_task_id(task_id):
+    try:
+        async with aiosqlite.connect("./db/db.sql") as conn:
+            cursor = await conn.execute(f"SELECT flag FROM Task_tb WHERE id={task_id}")
+            flag = await cursor.fetchone()
+            return flag[0]
+    except:
+        return -1
+
+
 async def show_tasks():
     async with aiosqlite.connect("./db/db.sql") as conn:
         cursor = await conn.execute("SELECT * FROM User_tb")

@@ -17,3 +17,16 @@ return_back_kb = InlineKeyboardMarkup(
                 [InlineKeyboardButton(text="Вернуться назад", callback_data="main_menu")],
             ]
         )
+
+# Сдать флаг
+flag_kb = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="Сдать флаг", callback_data="send_flag")],
+        [InlineKeyboardButton(text="Вернуться", callback_data="main_menu")]
+    ]
+)
+
+# Пустая клавиатура
+empty_kb = InlineKeyboardMarkup(
+    inline_keyboard=[]
+)

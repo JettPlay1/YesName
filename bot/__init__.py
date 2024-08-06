@@ -9,5 +9,7 @@ from aiogram.client.default import DefaultBotProperties
 from bot.keyboards import *
 
 TG_TOKEN = os.getenv("TOKEN")
+form_router = Router()
 tgbot = Bot(token=TG_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
+dp.include_router(form_router)
