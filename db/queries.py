@@ -23,6 +23,8 @@ async def get_user_data(user_id: int) -> dict:
             user_data["task_id"]         = row[4]
             user_data["subtask_id"]      = row[5]
             user_data["completed_tasks"] = row[6]
+            user_data["prefix"]          = row[7]
+            user_data["mincoins"]        = row[8]
 
             return user_data
         
@@ -51,6 +53,8 @@ async def get_all_users(column: any = None,
                 user_data["task_id"]         = row[4]
                 user_data["subtask_id"]      = row[5]
                 user_data["completed_tasks"] = row[6]
+                user_data["prefix"]          = row[7]
+                user_data["mincoins"]        = row[8]
                 users.append(user_data)
 
             return users
@@ -65,7 +69,9 @@ async def insert_user(user_id: int,
                       surname: str = "default_name", 
                       score: int = 0, 
                       task_id: int = -1, 
-                      completed_tasks: str = ""):
+                      completed_tasks: str = "",
+                      prefix: str = "",
+                      mincoins: int = 0):
     try:
         async with engine.connect() as conn:
             await conn.execute(insert(User).values(id=user_id, 
@@ -73,8 +79,9 @@ async def insert_user(user_id: int,
                                                    surname=surname, 
                                                    score=score,
                                                    task_id=task_id, 
-                                                   completed_tasks=completed_tasks
-                                                   ))
+                                                   completed_tasks=completed_tasks,
+                                                   prefix=prefix,
+                                                   mincoins=mincoins))
             await conn.commit()
     except Exception as e:
         logging.error(f"Произошла ошибка при добавлении пользователя в БД: {e}")
@@ -166,6 +173,27 @@ async def get_all_tasks() -> dict:
         
     except Exception as e:
         logging.error(f"Произошла ошибка при запросе к БД (tasks): {e}")
+        return []
+
+
+async def get_all_goods():
+    try:
+        async with engine.connect() as conn:
+            result = await conn.execute(select(Goods))
+            goods = []
+            for row in result.fetchall():
+                good_data = {}
+                good_data["id"]          = row[0]
+                good_data["name"]        = row[1]
+                good_data["description"] = row[2]
+                good_data["price"]       = row[3]
+                good_data["prefix"]      = row[4]
+                goods.append(good_data)
+
+            return goods
+        
+    except Exception as e:
+        logging.error(f"Произошла ошибка при запросе к БД (get_all_goods): {e}")
         return []
 
 

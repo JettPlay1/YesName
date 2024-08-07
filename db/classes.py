@@ -1,5 +1,5 @@
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy import  Column, Integer, String, ForeignKeyConstraint
+from sqlalchemy import  Column, Integer, String, ARRAY
 
 class Base(DeclarativeBase): pass
 
@@ -13,6 +13,8 @@ class User(Base):
     task_id = Column(Integer)
     subtask_id = Column(Integer)
     completed_tasks = Column(String)
+    prefix = Column(String)
+    mincoins = Column(Integer)
 
 
 class Task(Base):
@@ -30,3 +32,12 @@ class Subtask(Base):
     description = Column(String)
     task_id = Column(Integer)
     flag = Column(String)
+
+
+class Goods(Base):
+    __tablename__ = "goods"
+    id = Column(Integer, primary_key=True)
+    name = Column(String)
+    description = Column(String)
+    price = Column(Integer)
+    prefix = Column(String)
