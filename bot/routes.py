@@ -22,6 +22,7 @@ async def start_command(message: Message):
         await insert_user(user_id)
 
     user_data = await get_user_data(user_id)
+    await get_random_task(user_id)
 
     await message.answer(f"Привет, {user_data['surname']} {user_data['name']}. У тебя {user_data['score']} поинтов!", 
                                     reply_markup=main_menu_kb)
@@ -43,8 +44,9 @@ async def get_task_command(callback: CallbackQuery):
         await callback.message.edit_text(text=f"Сейчас у тебя нет задания для выполнения",
                                          reply_markup=return_back_kb)
         return
-    task_data = await get_task_data(user_data['task_id'])
-    await callback.message.edit_text(text=f"<b>{task_data['name']}</b>\n{task_data['description']}", 
+    task_data    = await get_task_data(user_data['task_id'])
+    subtask_data = await get_subtask_data(user_data['subtask_id'])
+    await callback.message.edit_text(text=f"<b>{task_data['theme']}</b>\n{subtask_data['name']}: {subtask_data['description']}", 
                                      reply_markup=flag_kb, 
                                      parse_mode='html')
 
@@ -108,15 +110,19 @@ async def validate_flag(message: Message, state: FSMContext):
     flag = message.text
     user_id = message.from_user.id
     user_data = await get_user_data(user_id)
+    subtask_data = await get_subtask_data(user_data['subtask_id'])
     task_data = await get_task_data(user_data['task_id'])
-
-    if flag == task_data['flag']:
-        flag_part = await get_flag_part(user_id, task_data['final_flag'])
+    if user_data['task_id'] == -1:
+        await message.answer(text=f"Задание уже решено!",
+                             reply_markup=return_back_kb)
+        return
+    if flag == subtask_data['flag']:
+        flag_part = await get_flag_part(user_id, task_data['flag'])
         await message.answer(text=f"Верный флаг! Частичка настоящего флага:\n{flag_part[0]}. {flag_part[1]}", 
                              reply_markup=return_back_kb)
         return
     
-    if flag == task_data['final_flag']:
+    if flag == task_data['flag']:
         await update_after_validate(task_data)
         await message.answer(text=f"Верный флаг! Вам начислено {task_data['score']} поинтов.", 
                              reply_markup=return_back_kb)
